@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"unicode/utf8"
 )
 
 // -----------------------------------------------------------------------------
@@ -92,6 +93,9 @@ type File struct {
 
 	// lines is protected by set.mutex
 	lines []int // lines contains the offset of the first character for each line (the first entry is always 0)
+
+	// byteOffsetOfRune is protected by set.mutex
+	byteOffsetOfRune []int // byteOffsetOfRune contains the byte offset at each rune offset
 }
 
 // Name returns the file name of file f as registered with AddFile.
@@ -135,6 +139,31 @@ func (f *File) SetLinesForContent(content []byte) {
 	f.set.mutex.Lock()
 	f.lines = lines
 	f.set.mutex.Unlock()
+}
+
+func (f *File) SetByteOffsetsForContent(content []byte) {
+	s := string(content)
+
+	byteOffsetOfRune := make([]int, utf8.RuneCount(content))
+	i := 0
+	for b, _ := range s {
+		byteOffsetOfRune[i] = b
+		i++
+	}
+
+	// set lines table
+	f.set.mutex.Lock()
+	f.byteOffsetOfRune = byteOffsetOfRune
+	f.set.mutex.Unlock()
+}
+
+// ByteOffsetOfRune returns the byte offset that points to the same position as
+// runeOffset. Assumes SetByteOffsetsForContent has been called.
+//
+func (f *File) ByteOffsetOfRune(runeOffset int) int {
+	f.set.mutex.RLock()
+	defer f.set.mutex.RUnlock()
+	return f.byteOffsetOfRune[runeOffset]
 }
 
 // Pos returns the Pos value for the given file offset;
@@ -282,7 +311,7 @@ func (s *FileSet) AddFile(filename string, base, size int) *File {
 		panic("illegal base or size")
 	}
 	// base >= s.base && size >= 0
-	f := &File{s, filename, base, size, []int{0}}
+	f := &File{s, filename, base, size, []int{0}, nil}
 	base += size + 1 // +1 because EOF also has a position
 	if base < 0 {
 		panic("token.Pos offset overflow (> 2G of source code in file set)")

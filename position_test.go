@@ -212,3 +212,20 @@ func TestFileSetRace(t *testing.T) {
 	}
 	stop.Wait()
 }
+
+func TestFileByteOffsetOfRune(t *testing.T) {
+	fset := NewFileSet()
+	b := []byte("x→y")
+	f := fset.AddFile("f", fset.Base(), len(b))
+	f.SetByteOffsetsForContent(b)
+
+	xB := f.ByteOffsetOfRune(0)
+	if want := 0; xB != want {
+		t.Errorf("got `x` byte offset at %d, want %d", xB, want)
+	}
+
+	yB := f.ByteOffsetOfRune(2)
+	if want := 4; yB != want {
+		t.Errorf("got `y` byte offset at %d, want %d", yB, want)
+	}
+}
