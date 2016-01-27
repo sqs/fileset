@@ -229,3 +229,24 @@ func TestFileByteOffsetOfRune(t *testing.T) {
 		t.Errorf("got `y` byte offset at %d, want %d", yB, want)
 	}
 }
+
+// File set should return offsets starting from 3 for files with UTF-8 BOM
+func TestFileByteOffsetOfRuneWithBOM(t *testing.T) {
+	fset := NewFileSet()
+	b := []byte{0xef, 0xbb, 0xbf, 'x'}
+	f := fset.AddFile("f", fset.Base(), len(b))
+	f.SetByteOffsetsForContent(b)
+
+	xB := f.ByteOffsetOfRune(0)
+	if want := 3; xB != want {
+		t.Errorf("got `x` byte offset at %d, want %d", xB, want)
+	}
+}
+
+// File set should not fail on file that contains only UTF-8 BOM
+func TestFileByteOffsetOfRuneWithBOMEmpty(t *testing.T) {
+	fset := NewFileSet()
+	b := []byte{0xef, 0xbb, 0xbf}
+	f := fset.AddFile("f", fset.Base(), len(b))
+	f.SetByteOffsetsForContent(b)
+}
