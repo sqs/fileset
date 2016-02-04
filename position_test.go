@@ -250,3 +250,15 @@ func TestFileByteOffsetOfRuneWithBOMEmpty(t *testing.T) {
 	f := fset.AddFile("f", fset.Base(), len(b))
 	f.SetByteOffsetsForContent(b)
 }
+
+// Arguments for ByteOffsetOfRune may be in range [0..num-runes-in-file] inclusive
+func TestEOFOffset(t *testing.T) {
+	fset := NewFileSet()
+	b := []byte{'*'}
+	f := fset.AddFile("f", fset.Base(), len(b))
+	f.SetByteOffsetsForContent(b)
+	xB := f.ByteOffsetOfRune(1)
+	if want := 1; xB != want {
+		t.Errorf("got `EOF` byte offset at %d, want %d", xB, want)
+	}
+}
